@@ -56,7 +56,9 @@ public class MainActivity extends Activity {
     static final int TXN_UNREGISTER  = 4;
     static final int REGISTER_FLAG   = 1;   // value com.syu.air passes
 
-    private IBinder canbus;
+    private IBinder canbus;                       // module 7, kept for cmd()
+    private final java.util.Map<Integer,IBinder> modules =
+            new java.util.HashMap<Integer,IBinder>();
     private TextView out;
     private ScrollView scroll;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -64,7 +66,8 @@ public class MainActivity extends Activity {
 
     /** Binder that the vendor service calls back into. */
     private abstract static class Callback extends Binder implements IInterface {
-        Callback() { attachInterface(this, CB_DESC); }
+        final Tables.Mod mod;
+        Callback(Tables.Mod mod) { this.mod = mod; attachInterface(this, CB_DESC); }
 
         @Override public IBinder asBinder() { return this; }
 
@@ -91,14 +94,28 @@ public class MainActivity extends Activity {
         abstract void update(int code, int[] i, float[] f, String[] s);
     }
 
-    /** One shared callback for every code; the code arrives as an argument. */
-    private final Callback callback = new Callback() {
-        @Override void update(int code, int[] i, float[] f, String[] s) {
-            line(String.format(Locale.US, "%-26s code=%-4d ints=%s flts=%s strs=%s",
-                    Names.of(code), code, Arrays.toString(i), Arrays.toString(f),
-                    Arrays.toString(s)));
-        }
-    };
+    /**
+     * One callback per module. Codes are only unique within a module -- code 2
+     * is U_STANDBY on MAIN and U_VOL on SOUND -- so the callback has to know
+     * which module it was registered against.
+     */
+    private Callback callbackFor(final Tables.Mod m) {
+        return new Callback(m) {
+            @Override void update(int code, int[] i, float[] f, String[] s) {
+                // len is recorded explicitly: it settles whether the
+                // progressive-prefix frames are real vendor behaviour or a
+                // logging artifact.
+                recWrite(System.currentTimeMillis() + "\t" + mod.label + "\t" + code
+                         + "\t" + mod.of(code) + "\t" + (i == null ? 0 : i.length)
+                         + "\t" + fmt(i));
+                if (rec != null) return;          // recording: skip the log spam
+                line(String.format(Locale.US, "%-7s %-28s c=%-5d %s",
+                        mod.label, mod.of(code), code, fmt(i))
+                        + (f != null ? " f=" + Arrays.toString(f) : "")
+                        + (s != null ? " s=" + Arrays.toString(s) : ""));
+            }
+        };
+    }
 
     @Override
     protected void onCreate(Bundle b) {
@@ -131,9 +148,13 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(cmdReceiver, filter, GATE, null, Context.RECEIVER_EXPORTED);
             registerReceiver(overlayReceiver, ofilter, GATE, null, Context.RECEIVER_EXPORTED);
+            registerReceiver(recordReceiver, new IntentFilter("com.probe.hu.RECORD"),
+                             GATE, null, Context.RECEIVER_EXPORTED);
         } else {
             registerReceiver(cmdReceiver, filter, GATE, null);
             registerReceiver(overlayReceiver, ofilter, GATE, null);
+            registerReceiver(recordReceiver, new IntentFilter("com.probe.hu.RECORD"),
+                             GATE, null);
         }
 
         for (String n : new String[]{"navigation_bar_height",
@@ -155,9 +176,12 @@ public class MainActivity extends Activity {
         @Override public void onServiceConnected(ComponentName n, IBinder svc) {
             line("connected to " + n.flattenToShortString());
             try {
-                canbus = getRemoteModule(svc, MODULE_CANBUS);
-                if (canbus == null) { line("module 7 returned NULL"); return; }
-                line("module 7 acquired: " + canbus);
+                for (Tables.Mod m : Tables.ALL) {
+                    IBinder b = getRemoteModule(svc, m.id);
+                    if (b == null) { line("module " + m.id + " (" + m.label + ") NULL"); continue; }
+                    modules.put(m.id, b);
+                }
+                canbus = modules.get(MODULE_CANBUS);
                 registerAll();
             } catch (Throwable t) {
                 line("ERROR " + t);
@@ -186,7 +210,7 @@ public class MainActivity extends Activity {
      *   am broadcast -a com.probe.hu.CMD --ei code 53 --ei value 1
      * FinalMainServer defines OFF=0, ON=1, SWITCH=2 (toggle).
      */
-    private void cmd(int code, int[] values) throws RemoteException {
+    private void cmd(IBinder module, int code, int[] values) throws RemoteException {
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MODULE_DESC);
@@ -194,23 +218,25 @@ public class MainActivity extends Activity {
             data.writeIntArray(values);
             data.writeFloatArray(null);
             data.writeStringArray(null);
-            canbus.transact(TXN_CMD, data, reply, 0);
+            module.transact(TXN_CMD, data, reply, 0);
             reply.readException();
         } finally { data.recycle(); reply.recycle(); }
     }
 
     private final BroadcastReceiver cmdReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent it) {
+            int mod  = it.getIntExtra("mod", MODULE_CANBUS);
             int code = it.getIntExtra("code", -1);
             int v0   = it.getIntExtra("v0", 1);
             int v1   = it.getIntExtra("v1", 0);
             int n    = it.getIntExtra("n", 2);        // array length: 1 or 2
             if (code < 0)      { line("CMD rejected: no code extra"); return; }
-            if (canbus == null){ line("CMD rejected: module 7 not bound"); return; }
+            IBinder target = modules.get(mod);
+            if (target == null) { line("CMD rejected: module " + mod + " not bound"); return; }
             int[] vals = (n == 1) ? new int[]{ v0 } : new int[]{ v0, v1 };
             try {
-                cmd(code, vals);
-                line(">>> CMD " + Names.of(code) + " code=" + code
+                cmd(target, code, vals);
+                line(">>> CMD mod=" + mod + " code=" + code
                         + " vals=" + Arrays.toString(vals));
             } catch (Throwable t) {
                 line(">>> CMD FAILED code=" + code + " : " + t);
@@ -261,27 +287,118 @@ public class MainActivity extends Activity {
         }
     };
 
-    private void register(int code) throws RemoteException {
+    private void register(IBinder module, Callback cb, int code) throws RemoteException {
         Parcel data = Parcel.obtain(), reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(MODULE_DESC);
-            data.writeStrongBinder(callback.asBinder());
+            data.writeStrongBinder(cb.asBinder());
             data.writeInt(code);
             data.writeInt(REGISTER_FLAG);
-            canbus.transact(TXN_REGISTER, data, reply, 0);
+            module.transact(TXN_REGISTER, data, reply, 0);
             reply.readException();
         } finally { data.recycle(); reply.recycle(); }
     }
 
+    /** Keeps callbacks alive; a GC'd callback stops receiving updates. */
+    private final java.util.List<Callback> held = new java.util.ArrayList<Callback>();
+
     private void registerAll() {
-        int ok = 0, failed = 0;
-        for (int code : Names.CODES) {
-            try { register(code); ok++; }
-            catch (Throwable t) { failed++; }
+        for (Tables.Mod m : Tables.ALL) {
+            IBinder b = modules.get(m.id);
+            if (b == null) continue;
+            Callback cb = callbackFor(m);
+            held.add(cb);
+            int ok = 0, failed = 0;
+            for (int code : m.codes) {
+                try { register(b, cb, code); ok++; }
+                catch (Throwable t) { failed++; }
+            }
+            line("module " + m.id + " " + m.label + ": registered " + ok
+                 + (failed > 0 ? ", " + failed + " failed" : ""));
         }
-        line("registered " + ok + " codes, " + failed + " failed (flag=" + REGISTER_FLAG + ")");
-        line("================ tap the climate bar now ================");
+        line("======================================================");
     }
+
+    /**
+     * Long arrays are rendered as hex. Arrays.toString costs ~5 chars a byte,
+     * which overruns logcat's line budget on a 20-byte MCU frame and silently
+     * truncates the tail - where the interesting bytes tend to be.
+     */
+    private static String fmt(int[] a) {
+        if (a == null) return "null";
+        if (a.length <= 4) return Arrays.toString(a);
+        StringBuilder b = new StringBuilder(a.length * 2 + 4);
+        b.append('<');
+        for (int v : a) b.append(String.format(Locale.US, "%02X", v & 0xFF));
+        b.append('>').append(a.length);
+        return b.toString();
+    }
+
+    // ---- recording -------------------------------------------------------
+    // Writes to the app's own external dir, which `adb pull` can reach with no
+    // storage permission and no root. Used for driving captures, where wireless
+    // debugging is unavailable (Android ties it to an active Wi-Fi connection).
+    private java.io.BufferedWriter rec;
+    private String recPath;
+    private android.location.LocationListener gpsListener;
+
+    private synchronized void recWrite(String s) {
+        if (rec == null) return;
+        try { rec.write(s); rec.write('\n'); } catch (Throwable ignored) {}
+    }
+
+    private synchronized void recStart() {
+        if (rec != null) { line("already recording -> " + recPath); return; }
+        try {
+            java.io.File f = new java.io.File(getExternalFilesDir(null),
+                    "huprobe-" + System.currentTimeMillis() + ".tsv");
+            rec = new java.io.BufferedWriter(new java.io.FileWriter(f), 1 << 16);
+            recPath = f.getAbsolutePath();
+            recWrite("# ms\tsource\tcode\tname\tlen\tvalue");
+            line("RECORDING -> " + recPath);
+            startGps();
+        } catch (Throwable t) { line("record start FAILED: " + t); }
+    }
+
+    private synchronized void recStop() {
+        if (rec == null) { line("not recording"); return; }
+        try { rec.flush(); rec.close(); } catch (Throwable ignored) {}
+        rec = null;
+        stopGps();
+        line("RECORDING STOPPED -> " + recPath);
+    }
+
+    /** The unit's own GPS, recorded alongside the frames as speed ground truth. */
+    private void startGps() {
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager)
+                    getSystemService(Context.LOCATION_SERVICE);
+            gpsListener = new android.location.LocationListener() {
+                @Override public void onLocationChanged(android.location.Location l) {
+                    recWrite(System.currentTimeMillis() + "\tGPS\t-1\tspeed_mps\t1\t"
+                             + l.getSpeed());
+                }
+            };
+            lm.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
+                    500, 0, gpsListener);
+            line("gps ground-truth started");
+        } catch (Throwable t) { line("gps unavailable: " + t); }
+    }
+
+    private void stopGps() {
+        if (gpsListener == null) return;
+        try {
+            ((android.location.LocationManager) getSystemService(Context.LOCATION_SERVICE))
+                    .removeUpdates(gpsListener);
+        } catch (Throwable ignored) {}
+        gpsListener = null;
+    }
+
+    private final BroadcastReceiver recordReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent it) {
+            if (it.getIntExtra("on", 1) != 0) recStart(); else recStop();
+        }
+    };
 
     private void line(final String s) {
         Log.i(TAG, s);
