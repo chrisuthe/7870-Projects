@@ -2,8 +2,17 @@
 
 | File | Source | Scope |
 |---|---|---|
-| `U_AIR_table.txt` | `FinalCanbus` in `com.syu.air.apk`, via `dexdump` | universal — same on all vehicles |
-| `command-index-wk2.tsv` | live sweep, second pass | **Jeep Grand Cherokee WK2 only** |
+| `U_AIR_table.txt` | `FinalCanbus` (climate), via `dexdump` | universal |
+| `U_CANBUS_table.txt` | `FinalCanbus` (non-climate) | universal |
+| `U_MAIN_table.txt` | `FinalMain` — module 0 | universal |
+| `U_SOUND_table.txt` | `FinalSound` — module 4 | universal |
+| `U_STEER_table.txt` | `FinalSteer` — module 10 | universal |
+| `command-index-wk2.tsv` | live sweep, second pass | **WK2 only** |
+| `mcu-frames-wk2.md` | decoded from the raw frame stream | **WK2 only** |
+
+"Universal" means the constant is defined identically across all 228 vehicle
+profiles. It does **not** mean your car populates it — see
+[wiki: Beyond Climate](https://github.com/chrisuthe/7870-Projects/wiki/10-Beyond-Climate).
 
 `U_AIR_table.txt` is `NAME=code`, one per line. `probe/build.sh` generates
 `Names.java` from it at build time, so it is the single source of truth for the
