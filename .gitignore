@@ -1,0 +1,8 @@
+# generated at build time from data/U_AIR_table.txt
+probe/src/com/probe/hu/Names.java
+probe/build/
+
+# local capture output
+*.tsv.local
+*.log
+*.png

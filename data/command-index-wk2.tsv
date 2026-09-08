@@ -1,0 +1,30 @@
+# Command indices for cmd(6, {1, N}) on module 7 (canbus).
+# VEHICLE-SPECIFIC: Jeep Grand Cherokee WK2, profile Car_0374_PA_Jeep_All.
+# Verified live, second pass from known baselines. See docs/06-command-index.md
+#
+# N	function	type	notes
+1	ac	toggle
+2	auto_on	macro	also sets A/C, clears body-blow, fan->15
+3	recirculate	toggle
+4	temp_left_up	step	1 degF
+5	temp_left_down	step	1 degF
+6	fan_up	step	exits AUTO as a side effect
+7	fan_down	step
+8	airflow_face	set	idempotent
+9	airflow_face_feet	set	idempotent
+10	airflow_feet	set	idempotent
+11	airflow_feet_windshield	set	idempotent
+12	front_defrost	macro	forces recirc on, fan->6
+13	sync	toggle	this is the button labelled DUAL
+14	rear_defrost	toggle
+15	max_ac	macro	temps -> -2 sentinel
+16	climate_power	toggle	WARNING: turns the system off
+17	seat_heat_left	cycle	down from 3
+18	seat_heat_right	cycle	down from 3
+19	-	none	unmapped or not fitted
+20	temp_right_up	step
+21	temp_right_down	step
+22	seat_vent_left	cycle
+23	seat_vent_right	cycle
+24	steering_wheel_heat	toggle
+25	airflow_feet	set	duplicate of 10

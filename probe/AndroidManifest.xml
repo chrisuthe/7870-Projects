@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.probe.hu"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
+
+    <!-- Android 11+ package visibility: without this, bindService to another
+         app's service silently fails even though the service is exported. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <queries>
+        <package android:name="com.syu.ms" />
+        <package android:name="com.syu.air" />
+        <package android:name="com.syu.canbus" />
+    </queries>
+
+    <application
+        android:label="HU Probe"
+        android:debuggable="true"
+        android:allowBackup="false">
+        <activity
+            android:name=".MainActivity"
+            android:label="HU Probe"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
