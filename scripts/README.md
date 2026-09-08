@@ -18,6 +18,7 @@ it's the thing that makes the bus visible.
 | `hu-cmd.sh <N>` | Send one command index, report what changed |
 | `hu-sweep.sh [from] [to]` | Sweep a range of command indices |
 | `hu-tap.sh <x> <y>` | Inject a tap, report what changed |
+| `hu-record.sh start\|stop\|pull` | On-device recording for driving captures |
 
 ## The workflow that keeps a car safe
 

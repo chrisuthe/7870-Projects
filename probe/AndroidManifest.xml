@@ -10,6 +10,8 @@
          app's service silently fails even though the service is exported. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <queries>
         <package android:name="com.syu.ms" />
         <package android:name="com.syu.air" />

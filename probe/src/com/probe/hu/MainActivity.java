@@ -102,6 +102,13 @@ public class MainActivity extends Activity {
     private Callback callbackFor(final Tables.Mod m) {
         return new Callback(m) {
             @Override void update(int code, int[] i, float[] f, String[] s) {
+                // len is recorded explicitly: it settles whether the
+                // progressive-prefix frames are real vendor behaviour or a
+                // logging artifact.
+                recWrite(System.currentTimeMillis() + "\t" + mod.label + "\t" + code
+                         + "\t" + mod.of(code) + "\t" + (i == null ? 0 : i.length)
+                         + "\t" + fmt(i));
+                if (rec != null) return;          // recording: skip the log spam
                 line(String.format(Locale.US, "%-7s %-28s c=%-5d %s",
                         mod.label, mod.of(code), code, fmt(i))
                         + (f != null ? " f=" + Arrays.toString(f) : "")
@@ -141,9 +148,13 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(cmdReceiver, filter, GATE, null, Context.RECEIVER_EXPORTED);
             registerReceiver(overlayReceiver, ofilter, GATE, null, Context.RECEIVER_EXPORTED);
+            registerReceiver(recordReceiver, new IntentFilter("com.probe.hu.RECORD"),
+                             GATE, null, Context.RECEIVER_EXPORTED);
         } else {
             registerReceiver(cmdReceiver, filter, GATE, null);
             registerReceiver(overlayReceiver, ofilter, GATE, null);
+            registerReceiver(recordReceiver, new IntentFilter("com.probe.hu.RECORD"),
+                             GATE, null);
         }
 
         for (String n : new String[]{"navigation_bar_height",
@@ -322,6 +333,72 @@ public class MainActivity extends Activity {
         b.append('>').append(a.length);
         return b.toString();
     }
+
+    // ---- recording -------------------------------------------------------
+    // Writes to the app's own external dir, which `adb pull` can reach with no
+    // storage permission and no root. Used for driving captures, where wireless
+    // debugging is unavailable (Android ties it to an active Wi-Fi connection).
+    private java.io.BufferedWriter rec;
+    private String recPath;
+    private android.location.LocationListener gpsListener;
+
+    private synchronized void recWrite(String s) {
+        if (rec == null) return;
+        try { rec.write(s); rec.write('\n'); } catch (Throwable ignored) {}
+    }
+
+    private synchronized void recStart() {
+        if (rec != null) { line("already recording -> " + recPath); return; }
+        try {
+            java.io.File f = new java.io.File(getExternalFilesDir(null),
+                    "huprobe-" + System.currentTimeMillis() + ".tsv");
+            rec = new java.io.BufferedWriter(new java.io.FileWriter(f), 1 << 16);
+            recPath = f.getAbsolutePath();
+            recWrite("# ms\tsource\tcode\tname\tlen\tvalue");
+            line("RECORDING -> " + recPath);
+            startGps();
+        } catch (Throwable t) { line("record start FAILED: " + t); }
+    }
+
+    private synchronized void recStop() {
+        if (rec == null) { line("not recording"); return; }
+        try { rec.flush(); rec.close(); } catch (Throwable ignored) {}
+        rec = null;
+        stopGps();
+        line("RECORDING STOPPED -> " + recPath);
+    }
+
+    /** The unit's own GPS, recorded alongside the frames as speed ground truth. */
+    private void startGps() {
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager)
+                    getSystemService(Context.LOCATION_SERVICE);
+            gpsListener = new android.location.LocationListener() {
+                @Override public void onLocationChanged(android.location.Location l) {
+                    recWrite(System.currentTimeMillis() + "\tGPS\t-1\tspeed_mps\t1\t"
+                             + l.getSpeed());
+                }
+            };
+            lm.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
+                    500, 0, gpsListener);
+            line("gps ground-truth started");
+        } catch (Throwable t) { line("gps unavailable: " + t); }
+    }
+
+    private void stopGps() {
+        if (gpsListener == null) return;
+        try {
+            ((android.location.LocationManager) getSystemService(Context.LOCATION_SERVICE))
+                    .removeUpdates(gpsListener);
+        } catch (Throwable ignored) {}
+        gpsListener = null;
+    }
+
+    private final BroadcastReceiver recordReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent it) {
+            if (it.getIntExtra("on", 1) != 0) recStart(); else recStop();
+        }
+    };
 
     private void line(final String s) {
         Log.i(TAG, s);

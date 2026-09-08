@@ -78,6 +78,48 @@ adb shell am broadcast -a com.probe.hu.OVERLAY --ei h 0   --ei type 2038  # remo
 2019 = `TYPE_NAVIGATION_BAR` (refused for a normal app — that refusal is itself
 the finding).
 
+### Recording (for driving captures)
+
+Wireless debugging is unusable on the move — Android ties it to an active Wi-Fi
+connection, so it stops the moment you leave the driveway. Tailscale doesn't
+help; the toggle itself goes away. So the probe records to the unit's own
+storage instead, and you pull the file afterwards.
+
+```bash
+adb shell pm grant com.probe.hu android.permission.ACCESS_FINE_LOCATION  # once
+adb shell am broadcast -a com.probe.hu.RECORD --ei on 1                  # start
+#   ... drive ...
+adb shell am broadcast -a com.probe.hu.RECORD --ei on 0                  # stop
+adb pull /sdcard/Android/data/com.probe.hu/files/
+```
+
+Or use [`scripts/hu-record.sh`](../scripts/hu-record.sh) `start` / `stop` / `pull`.
+
+Output is TSV in the app's own external directory — reachable by `adb pull`
+with no storage permission and no root:
+
+```
+# ms      source  code  name              len  value
+1757...   CANBUS  1019  U_CANBUS_FRAME..  13   <2E2902E414CC>13
+1757...   GPS     -1    speed_mps         1    12.4
+```
+
+Two deliberate details:
+
+- **GPS velocity is recorded alongside the frames.** The unit has its own
+  receiver, so a driving capture carries its own speed ground truth — decoding
+  road speed becomes a correlation against a known reference rather than
+  guesswork.
+- **The raw array length is recorded per row.** That should settle whether the
+  progressive-prefix frames are genuine vendor behaviour or a logging artifact.
+
+While recording, per-update logcat output is suppressed — at ~26 frames/sec it
+would otherwise bury the log and cost throughput. Roughly 45 MB/hour.
+
+> **Not yet tested on hardware.** It compiles and installs; the vehicle was
+> unavailable when it was written. Verify with a short stationary recording
+> before relying on it for a drive.
+
 ## Manifest notes
 
 Two things are load-bearing:
