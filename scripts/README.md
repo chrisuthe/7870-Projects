@@ -42,7 +42,7 @@ anything other than CLEAN.
 - **Single-pass sweep results are hypotheses, not findings.** Each index is
   sampled in whatever state the previous one left behind. That produced three
   wrong labels on this vehicle. Re-test from a known baseline —
-  see [docs/06](../docs/06-command-index.md).
+  see [wiki: Sending Commands](https://github.com/chrisuthe/7870-Projects/wiki/6-Sending-Commands).
 - **Command indices are per-vehicle.** The table in the docs is for a Jeep
   Grand Cherokee WK2.
 - `hu-tap.sh` is often *better* than `hu-cmd.sh` for unwinding the

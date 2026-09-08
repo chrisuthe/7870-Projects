@@ -123,12 +123,17 @@ public class MainActivity extends Activity {
 
         IntentFilter filter = new IntentFilter("com.probe.hu.CMD");
         IntentFilter ofilter = new IntentFilter("com.probe.hu.OVERLAY");
+        // Exported so `adb shell am broadcast` can reach them, but gated on
+        // android.permission.DUMP: the shell uid holds it, ordinary installed
+        // apps do not. Without this any app on the unit could drive the
+        // climate system through this receiver.
+        final String GATE = android.Manifest.permission.DUMP;
         if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(cmdReceiver, filter, Context.RECEIVER_EXPORTED);
-            registerReceiver(overlayReceiver, ofilter, Context.RECEIVER_EXPORTED);
+            registerReceiver(cmdReceiver, filter, GATE, null, Context.RECEIVER_EXPORTED);
+            registerReceiver(overlayReceiver, ofilter, GATE, null, Context.RECEIVER_EXPORTED);
         } else {
-            registerReceiver(cmdReceiver, filter);
-            registerReceiver(overlayReceiver, ofilter);
+            registerReceiver(cmdReceiver, filter, GATE, null);
+            registerReceiver(overlayReceiver, ofilter, GATE, null);
         }
 
         for (String n : new String[]{"navigation_bar_height",

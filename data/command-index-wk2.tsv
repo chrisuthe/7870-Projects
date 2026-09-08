@@ -1,6 +1,6 @@
 # Command indices for cmd(6, {1, N}) on module 7 (canbus).
 # VEHICLE-SPECIFIC: Jeep Grand Cherokee WK2, profile Car_0374_PA_Jeep_All.
-# Verified live, second pass from known baselines. See docs/06-command-index.md
+# Verified live, second pass from known baselines. See https://github.com/chrisuthe/7870-Projects/wiki/6-Sending-Commands
 #
 # N	function	type	notes
 1	ac	toggle

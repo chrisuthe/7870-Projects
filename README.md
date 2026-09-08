@@ -37,29 +37,36 @@ canbus.cmd(6, new int[]{ 1, 4 }, null, null);        // temp left up
 
 ## Start here
 
-**[Documentation index →](docs/README.md)**
+**The full write-up is in the
+[project wiki](https://github.com/chrisuthe/7870-Projects/wiki).**
 
-The docs are written to be read in order, but each stands alone:
+It's written to be read in order, but each page stands alone:
 
 | | |
 |---|---|
-| [1. The unit](docs/01-the-unit.md) | Identifying the hardware and firmware |
-| [2. Getting access](docs/02-getting-access.md) | ADB on a unit with locked developer options |
-| [3. What draws the bar](docs/03-what-draws-the-bar.md) | It isn't SystemUI, and that matters |
-| [4. The IPC framework](docs/04-the-ipc-framework.md) | The SYU AIDL surface and module ids |
-| [5. Climate data codes](docs/05-climate-data-codes.md) | The 87 `U_AIR_*` read codes |
-| [6. Sending commands](docs/06-command-index.md) | The write recipe and the command table |
-| [7. Screen space](docs/07-screen-space.md) | Why the bar is 227px and why you can't grow it |
-| [8. Root](docs/08-root.md) | What it costs, what it buys |
-| [9. Method and mistakes](docs/09-method-and-mistakes.md) | How this was found, including the wrong turns |
+| [1. The unit](https://github.com/chrisuthe/7870-Projects/wiki/1-The-Unit) | Identifying the hardware and firmware |
+| [2. Getting access](https://github.com/chrisuthe/7870-Projects/wiki/2-Getting-Access) | ADB on a unit with locked developer options |
+| [3. What draws the bar](https://github.com/chrisuthe/7870-Projects/wiki/3-What-Draws-the-Bar) | It isn't SystemUI, and that matters |
+| [4. The IPC framework](https://github.com/chrisuthe/7870-Projects/wiki/4-The-IPC-Framework) | The SYU AIDL surface and module ids |
+| [5. Climate data codes](https://github.com/chrisuthe/7870-Projects/wiki/5-Climate-Data-Codes) | The 87 `U_AIR_*` read codes |
+| [6. Sending commands](https://github.com/chrisuthe/7870-Projects/wiki/6-Sending-Commands) | The write recipe and the command table |
+| [7. Screen space](https://github.com/chrisuthe/7870-Projects/wiki/7-Screen-Space) | Why the bar is 227px and why you can't grow it |
+| [8. Root](https://github.com/chrisuthe/7870-Projects/wiki/8-Root) | What it costs, what it buys |
+| [9. Method and mistakes](https://github.com/chrisuthe/7870-Projects/wiki/9-Method-and-Mistakes) | How this was found, including the wrong turns |
 
 ## Repo layout
 
 ```
-docs/       the write-up
 probe/      HU Probe - an Android app that reads and writes the climate bus
 scripts/    shell helpers for driving a unit over ADB
 data/       extracted constant tables
+docs/       pointer to the wiki, which holds the write-up
+```
+
+The wiki is a git repo in its own right:
+
+```bash
+git clone https://github.com/chrisuthe/7870-Projects.wiki.git
 ```
 
 ## Quick start
@@ -96,5 +103,5 @@ Two commands are worth knowing before you experiment:
 
 Apache 2.0. See [LICENSE](LICENSE).
 
-Credit for the root procedure referenced in [docs/08-root.md](docs/08-root.md)
+Credit for the root procedure referenced in [wiki: Root](https://github.com/chrisuthe/7870-Projects/wiki/8-Root)
 belongs to the XDA and 4PDA communities; it is linked, not reproduced.

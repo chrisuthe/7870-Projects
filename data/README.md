@@ -10,7 +10,7 @@
 read codes.
 
 The command index table is per-vehicle. To build one for your car, see the
-bottom of [docs/06-command-index.md](../docs/06-command-index.md).
+bottom of [wiki: Sending Commands](https://github.com/chrisuthe/7870-Projects/wiki/6-Sending-Commands).
 
 ## Re-extracting the read codes yourself
 
