@@ -4,17 +4,17 @@ A minimal Android app that reads and writes the SYU/FYT vendor climate bus.
 
 It exists to make the bus **observable**. Without it you are inferring vehicle
 state from screenshots and another app's log output, which is how most of the
-wrong conclusions in [docs/09](../docs/09-method-and-mistakes.md) happened.
+wrong conclusions in [wiki: Method and Mistakes](https://github.com/chrisuthe/7870-Projects/wiki/9-Method-and-Mistakes) happened.
 
 - Binds `com.syu.ms.toolkit`, obtains module 7 (canbus)
 - Subscribes to all 87 `U_AIR_*` codes — every state change is logged
 - Exposes a write path over a broadcast, so you can drive it from a shell
-- Can create test overlays, for the screen-space experiments in [docs/07](../docs/07-screen-space.md)
+- Can create test overlays, for the screen-space experiments in [wiki: Screen Space](https://github.com/chrisuthe/7870-Projects/wiki/7-Screen-Space)
 
 **Read-only until you tell it otherwise.** It never sends a command on its own.
 
 No Gradle, no dependencies, ~250 lines. Hand-written Binder proxies against the
-transaction ids in [docs/04](../docs/04-the-ipc-framework.md).
+transaction ids in [wiki: The IPC Framework](https://github.com/chrisuthe/7870-Projects/wiki/4-The-IPC-Framework).
 
 ## Build and install
 
@@ -63,7 +63,7 @@ adb shell am broadcast -a com.probe.hu.CMD --ei code 6 --ei v0 1 --ei v1 1
 array, `n` sets array length (default 2).
 
 > `v1` is the per-vehicle command index. The table in
-> [docs/06](../docs/06-command-index.md) is for a **Jeep Grand Cherokee WK2**.
+> [wiki: Sending Commands](https://github.com/chrisuthe/7870-Projects/wiki/6-Sending-Commands) is for a **Jeep Grand Cherokee WK2**.
 > On another vehicle, sweep and build your own.
 
 ### Overlay experiments
