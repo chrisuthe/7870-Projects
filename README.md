@@ -35,6 +35,25 @@ canbus.cmd(6, new int[]{ 1, 4 }, null, null);        // temp left up
 
 ---
 
+## Built with this
+
+**[chrisuthe/wk2-climate](https://github.com/chrisuthe/wk2-climate)** — a
+working replacement for the OEM `com.syu.air` bottom bar and a full climate
+page, running in a Jeep Grand Cherokee WK2. This repo is the protocol
+reference; that one is the app.
+
+Using it on a real vehicle corrected several things inferred here — command 2
+(AUTO) is a toggle rather than set-only, `U_AIR_SYNC`'s polarity is DUAL (`1`
+= independent zones), command 15 also drives the fan to 7 and clears AUTO, and
+there is no cabin-temperature signal on this platform at all. The wiki pages
+carry the details.
+
+It also documents something that affects **any** long-running third-party app
+on these units, not just climate UIs: `com.syu.ms` force-stops 27 packages on
+sleep through a hidden `ActivityManager` API, skipping only names that match a
+regex compiled from an asset inside its own APK. `com.syu.air` is on that list.
+Yours will not be.
+
 ## Start here
 
 **The full write-up is in the
